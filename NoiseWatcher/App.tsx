@@ -7,6 +7,7 @@ export default function App() {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [noiseLevel, setNoiseLevel] = useState<string>('Baixo');
+  const [dbLevel, setDbLevel] = useState<number>(0);
   const [recordingDuration, setRecordingDuration] = useState<number>(0);
 
   // Função para iniciar a gravação
@@ -39,14 +40,17 @@ export default function App() {
     // A intensidade do som pode ser medida pela amplitude (não é um cálculo exato de decibéis)
     const averageAmplitude = status.metering;
 
-    // Define o nível de ruído baseado na amplitude
+    // Define o nível de ruído e o nível dB aproximado com base na amplitude
     if (averageAmplitude !== undefined) {
       if (averageAmplitude < -40) {
         setNoiseLevel('Baixo');
+        setDbLevel(30); // Exemplo: baixo nível de som
       } else if (averageAmplitude >= -40 && averageAmplitude < -20) {
         setNoiseLevel('Médio');
+        setDbLevel(60); // Exemplo: nível moderado de som
       } else if (averageAmplitude >= -20) {
         setNoiseLevel('Alto');
+        setDbLevel(90); // Exemplo: nível alto de som
       }
     }
   };
@@ -66,6 +70,18 @@ export default function App() {
     }
   };
 
+  // Função para obter a mensagem com base no nível de ruído
+  const getNoiseMessage = () => {
+    if (noiseLevel === 'Médio') {
+      return 'Recomendado usar abafadores ou fones antiruído';
+    } else if (noiseLevel === 'Alto') {
+      return 'Volume muito alto, use abafadores ou fones antiruído';
+    } else if (noiseLevel === 'Muito alto') {
+      return 'Volume muito alto com risco de sobrecarga sensorial, procure um local mais calmo';
+    }
+    return '';
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>NoiseWatcher</Text>
@@ -78,6 +94,9 @@ export default function App() {
       />
       {sound && <Text style={styles.uri}>Gravação salva em: {sound}</Text>}
       <Text style={styles.noiseLevel}>Nível de Ruído: {noiseLevel}</Text>
+      <Text style={styles.dbLevel}>dB: {dbLevel} dB</Text>
+      <View style={[styles.thermometer, { height: `${dbLevel / 100 * 100}%` }]}></View>
+      <Text style={styles.message}>{getNoiseMessage()}</Text>
     </View>
   );
 }
@@ -106,5 +125,22 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  dbLevel: {
+    marginTop: 10,
+    fontSize: 18,
+  },
+  thermometer: {
+    width: 20,
+    backgroundColor: 'green',
+    borderRadius: 10,
+    marginVertical: 20,
+    transition: 'height 0.3s ease',  // animação suave para o medidor
+  },
+  message: {
+    marginTop: 20,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
