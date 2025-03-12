@@ -1,146 +1,193 @@
-import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, Button } from 'react-native';
+import React, { useState } from 'react';
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Vibration,
+  Appearance,
+  SafeAreaView,
+  useWindowDimensions,
+} from 'react-native';
 import { Audio } from 'expo-av';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function App() {
-  const [sound, setSound] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [noiseLevel, setNoiseLevel] = useState<string>('Baixo');
   const [dbLevel, setDbLevel] = useState<number>(0);
-  const [recordingDuration, setRecordingDuration] = useState<number>(0);
+  const { width, height } = useWindowDimensions();
+  const theme = Appearance.getColorScheme();
 
-  // Função para iniciar a gravação
   const startRecording = async () => {
     try {
-      await Audio.requestPermissionsAsync(); // Pede permissão para usar o microfone
+      await Audio.requestPermissionsAsync();
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(recording);
       setIsRecording(true);
-      console.log('Iniciando gravação...');
       recording.setOnRecordingStatusUpdate(onRecordingStatusUpdate);
     } catch (error) {
       console.error('Erro ao iniciar a gravação:', error);
     }
   };
 
-  // Função de callback para atualizar status durante a gravação
   const onRecordingStatusUpdate = (status: Audio.RecordingStatus) => {
     if (status.isRecording) {
-      // Atualiza a duração da gravação
-      setRecordingDuration(status.durationMillis! / 1000);
-      calculateNoiseLevel(status); // Chama a função para calcular o nível de ruído
+      calculateNoiseLevel(status);
     }
   };
 
-  // Função para calcular o nível de ruído baseado na amplitude do áudio
   const calculateNoiseLevel = async (status: Audio.RecordingStatus) => {
-    // A intensidade do som pode ser medida pela amplitude (não é um cálculo exato de decibéis)
     const averageAmplitude = status.metering;
-
-    // Define o nível de ruído e o nível dB aproximado com base na amplitude
     if (averageAmplitude !== undefined) {
       if (averageAmplitude < -40) {
         setNoiseLevel('Baixo');
-        setDbLevel(30); // Exemplo: baixo nível de som
+        setDbLevel(30);
       } else if (averageAmplitude >= -40 && averageAmplitude < -20) {
         setNoiseLevel('Médio');
-        setDbLevel(60); // Exemplo: nível moderado de som
+        setDbLevel(60);
+        Vibration.vibrate(200);
       } else if (averageAmplitude >= -20) {
         setNoiseLevel('Alto');
-        setDbLevel(90); // Exemplo: nível alto de som
+        setDbLevel(90);
+        Vibration.vibrate(400);
       }
     }
   };
 
-  // Função para parar a gravação
   const stopRecording = async () => {
     try {
       setIsRecording(false);
       await recording?.stopAndUnloadAsync();
-      const uri = recording?.getURI();
-      console.log('Gravação salva em:', uri);
-      if (uri) {
-        setSound(uri);
-      }
     } catch (error) {
       console.error('Erro ao parar a gravação:', error);
     }
   };
 
-  // Função para obter a mensagem com base no nível de ruído
   const getNoiseMessage = () => {
-    if (noiseLevel === 'Médio') {
-      return 'Recomendado usar abafadores ou fones antiruído';
-    } else if (noiseLevel === 'Alto') {
-      return 'Volume muito alto, use abafadores ou fones antiruído';
-    } else if (noiseLevel === 'Muito alto') {
-      return 'Volume muito alto com risco de sobrecarga sensorial, procure um local mais calmo';
+    if (noiseLevel === 'Médio' || noiseLevel === 'Alto') {
+      return '🔊 Recomendado uso de abafadores para diminuir os estímulos sonoros';
     }
-    return '';
+    return '✅ Ambiente seguro';
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView
+      style={[styles.container, theme === 'dark' ? styles.darkTheme : styles.lightTheme]}
+    >
       <Text style={styles.title}>NoiseWatcher</Text>
-      <Text style={styles.info}>
-        {isRecording ? `Gravando... Duração: ${Math.floor(recordingDuration)}s` : 'Pressione o botão para começar a gravar.'}
-      </Text>
-      <Button
-        title={isRecording ? 'Parar Gravação' : 'Iniciar Gravação'}
+
+      <View style={styles.infoBox}>
+        <Text style={styles.noiseLevel}>Nível de Ruído: {noiseLevel}</Text>
+        <Text style={styles.dbLevel}>dB: {dbLevel} dB</Text>
+        <Text style={styles.message}>{getNoiseMessage()}</Text>
+      </View>
+
+      <View style={styles.thermometerContainer}>
+        <View style={styles.thermometer}>
+          <View style={[styles.thermometerFill, { height: `${dbLevel}%` }]} />
+        </View>
+        <Text style={styles.thermometerText}></Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.micButton, { bottom: height * 0.1 }]}
         onPress={isRecording ? stopRecording : startRecording}
-      />
-      {sound && <Text style={styles.uri}>Gravação salva em: {sound}</Text>}
-      <Text style={styles.noiseLevel}>Nível de Ruído: {noiseLevel}</Text>
-      <Text style={styles.dbLevel}>dB: {dbLevel} dB</Text>
-      <View style={[styles.thermometer, { height: `${dbLevel / 100 * 100}%` }]}></View>
-      <Text style={styles.message}>{getNoiseMessage()}</Text>
-    </View>
+      >
+        <MaterialIcons name="mic" size={width * 0.15} color="#fff" />
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
   },
+  lightTheme: {
+    backgroundColor: '#E3F2FD',
+  },
+  darkTheme: {
+    backgroundColor: '#121212',
+  },
   title: {
-    fontSize: 24,
+    fontSize: 38,
     fontWeight: 'bold',
+    color: '#0D47A1',
+    marginTop: 20,
+    textAlign: 'center',
   },
-  info: {
-    marginVertical: 10,
-    fontSize: 16,
-  },
-  uri: {
-    marginTop: 10,
-    fontSize: 12,
-    color: 'gray',
+  infoBox: {
+    backgroundColor: '#ffffff',
+    padding: 25,
+    borderRadius: 15,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+    width: '85%',
   },
   noiseLevel: {
-    marginTop: 10,
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
+    color: '#0D47A1',
   },
   dbLevel: {
-    marginTop: 10,
-    fontSize: 18,
-  },
-  thermometer: {
-    width: 20,
-    backgroundColor: 'green',
-    borderRadius: 10,
-    marginVertical: 20,
-    transition: 'height 0.3s ease',  // animação suave para o medidor
+    fontSize: 20,
+    color: '#444',
+    marginVertical: 5,
   },
   message: {
-    marginTop: 20,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#FF7043',
     textAlign: 'center',
+    marginTop: 10,
+  },
+  thermometerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+    justifyContent: 'space-evenly',
+    width: '100%',
+  },
+  thermometer: {
+    width: 40,
+    height: 120,
+    backgroundColor: '#ddd',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  thermometerFill: {
+    width: '100%',
+    backgroundColor: '#4CAF50',
+  },
+  thermometerText: {
+    fontSize: 14,
+    marginLeft: 10,
+    color: '#444',
+  },
+  micButton: {
+    width: 100,
+    height: 100,
+    backgroundColor: '#FF7043',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 8,
+    position: 'absolute',
+    right: 30,
   },
 });
