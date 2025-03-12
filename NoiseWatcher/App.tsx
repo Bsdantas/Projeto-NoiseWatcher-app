@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'green',
     borderRadius: 10,
     marginVertical: 20,
-    transition: 'height 0.3s ease',  // animação suave para o medidor
+    
   },
   message: {
     marginTop: 20,
