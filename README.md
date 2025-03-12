@@ -19,4 +19,8 @@ A ideia do **NoiseWatcher** surgiu devido à minha dificuldade com ruídos e cri
 - **Expo:** Ferramenta para desenvolvimento e teste de apps em dispositivos Android.
 - **expo-av:** Biblioteca usada para capturar áudio do microfone e medir os níveis de decibéis.
 
+- Imagens do app
+
+![WhatsApp Image 2025-03-12 at 18 31 07](https://github.com/user-attachments/assets/739e5880-236e-4c9b-81ce-166988e90007)
+![WhatsApp Image 2025-03-12 at 18 31 07 (1)](https://github.com/user-attachments/assets/1eac9dfe-5473-49a6-b798-a8ce22387f01)
 
